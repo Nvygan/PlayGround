@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Brumelune — Les Veilleurs · RPG tactique</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌙</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Message si WebGL indisponible -->
+  <div id="nogl" class="hidden">
+    <div class="menu-card">
+      <h1>🌙 Brumelune</h1>
+      <p>La magie des étoiles ne peut pas s'exprimer ici : <b>WebGL n'est pas disponible</b> sur cet appareil ou ce navigateur.</p>
+      <p>Essayez Chrome ou Firefox récent, avec l'accélération matérielle activée.</p>
+    </div>
+  </div>
+
+  <canvas id="scene"></canvas>
+
+  <!-- Barre supérieure : héros + initiative -->
+  <div id="hud-top" class="hidden">
+    <div id="hero-chip">
+      <div id="hero-face">🌙</div>
+      <div id="hero-meta">
+        <div id="hero-name">Veilleur</div>
+        <div class="track hp"><i id="hp-fill"></i><span id="hp-txt"></span></div>
+        <div class="track xp"><i id="xp-fill"></i></div>
+        <div id="res-line"><span id="pa-pill">✦ 6</span><span id="pm-pill">👣 4</span><span id="lvl-pill">Nv 1</span></div>
+      </div>
+    </div>
+    <div id="right-col">
+      <div id="init-strip"></div>
+      <div id="top-btns">
+        <button id="btn-inv" class="tbtn" title="Inventaire">🎒</button>
+        <button id="btn-quest" class="tbtn" title="Quêtes">📜<i id="quest-dot" class="hidden"></i></button>
+        <button id="btn-hero" class="tbtn" title="Personnage">🧝</button>
+        <button id="btn-save" class="tbtn" title="Sauvegarder">💾</button>
+      </div>
+    </div>
+  </div>
+  <div id="mode-banner" class="hidden"></div>
+
+  <!-- Panneau cible -->
+  <div id="target-card" class="hidden">
+    <div id="target-emoji">👹</div>
+    <div id="target-meta">
+      <div id="target-name"></div>
+      <div class="track hp small"><i id="target-hp"></i></div>
+      <div id="target-info"></div>
+    </div>
+  </div>
+
+  <!-- Bouton d'interaction contextuelle -->
+  <button id="interact-btn" class="hidden">💬 Parler</button>
+
+  <!-- Journal de combat -->
+  <div id="combat-log" class="hidden"></div>
+
+  <!-- Barre de sorts + actions -->
+  <div id="dock" class="hidden">
+    <div id="spell-bar"></div>
+    <div id="action-row">
+      <button id="btn-end" class="act primary">⏭ FIN DE TOUR</button>
+      <button id="btn-wait" class="act" title="Passer ce personnage">💤</button>
+      <button id="btn-cam-in" class="act" title="Zoom +">＋</button>
+      <button id="btn-cam-out" class="act" title="Zoom −">－</button>
+      <button id="btn-quality" class="act" title="Qualité graphique">✨<span id="q-label">M</span></button>
+      <button id="btn-help" class="act" title="Aide">❓</button>
+    </div>
+  </div>
+
+  <div id="spell-tip" class="hidden"></div>
+  <div id="float-layer"></div>
+  <div id="toast-layer"></div>
+
+  <!-- Écran titre / choix de classe -->
+  <div id="menu">
+    <div class="menu-card wide">
+      <div class="logo-sub">NÉRÉLYS · LES ÎLES DE BRUME</div>
+      <h1>BRUMELUNE<br><span>— Les Veilleurs —</span></h1>
+      <p class="tagline">Des fragments d'étoiles tombent sur les îles flottantes… et quelque chose grignote la brume. <b>Quatre Veilleurs</b> se lèvent. Lequel serez-vous ?</p>
+      <div id="class-grid"></div>
+      <div id="menu-row">
+        <button id="btn-new">🌟 NOUVELLE AVENTURE</button>
+        <button id="btn-continue" class="hidden">📂 CONTINUER</button>
+      </div>
+      <div class="menu-help">📱 Toucher = agir · Pincer = zoom · Boutons ＋/－<br>Explorez la <b>Clairière des Brumes</b>, parlez à la Gardienne, ouvrez des coffres et affrontez la brume corrompue !</div>
+      <div id="loading">Chargement…</div>
+    </div>
+  </div>
+
+  <!-- Dialogue PNJ -->
+  <div id="dialog" class="hidden"><div class="sheet">
+    <div id="dlg-name"></div><div id="dlg-text"></div><div id="dlg-btns"></div>
+  </div></div>
+
+  <!-- Inventaire -->
+  <div id="panel-inv" class="modal hidden"><div class="sheet large">
+    <div class="sheet-head"><b>🎒 Inventaire</b><span id="gold-line">🪙 0</span><button class="x" data-close="panel-inv">✖</button></div>
+    <div id="equip-row"></div>
+    <div id="inv-tabs"></div>
+    <div id="inv-grid"></div>
+    <div id="item-detail" class="hidden"></div>
+  </div></div>
+
+  <!-- Quêtes -->
+  <div id="panel-quest" class="modal hidden"><div class="sheet large">
+    <div class="sheet-head"><b>📜 Journal de quêtes</b><button class="x" data-close="panel-quest">✖</button></div>
+    <div id="quest-list"></div>
+  </div></div>
+
+  <!-- Personnage -->
+  <div id="panel-hero" class="modal hidden"><div class="sheet">
+    <div class="sheet-head"><b>🧝 Personnage</b><button class="x" data-close="panel-hero">✖</button></div>
+    <div id="hero-sheet"></div>
+  </div></div>
+
+  <!-- Boutique -->
+  <div id="panel-shop" class="modal hidden"><div class="sheet">
+    <div class="sheet-head"><b>🛍️ Caravane de Pilpin</b><button class="x" data-close="panel-shop">✖</button></div>
+    <div id="shop-list"></div>
+  </div></div>
+
+  <!-- Sauvegarde -->
+  <div id="panel-save" class="modal hidden"><div class="sheet">
+    <div class="sheet-head"><b>💾 Pierre de souvenir</b><button class="x" data-close="panel-save">✖</button></div>
+    <div id="save-info"></div>
+    <div class="btn-col">
+      <button id="btn-do-save">💾 Sauvegarder</button>
+      <button id="btn-do-load">📂 Charger</button>
+      <button id="btn-do-reset" class="danger">🔥 Recommencer la partie</button>
+    </div>
+  </div></div>
+
+  <!-- Fin de combat -->
+  <div id="panel-end" class="modal hidden"><div class="sheet">
+    <h1 id="end-title">Victoire !</h1>
+    <div id="end-body"></div>
+    <div id="loot-list"></div>
+    <div class="btn-col"><button id="btn-end-ok">✨ Continuer l'aventure</button></div>
+  </div></div>
+
+  <!-- Aide -->
+  <div id="panel-help" class="modal hidden"><div class="sheet large">
+    <div class="sheet-head"><b>❓ Guide du Veilleur</b><button class="x" data-close="panel-help">✖</button></div>
+    <div id="help-body">
+      <p>🌙 <b>Exploration :</b> touchez une case pour marcher. Approchez les personnages, coffres, champignons et pierres pour interagir. Marcher sur un monstre (ou le toucher) lance le <b>combat</b>.</p>
+      <p>⚔️ <b>Combat :</b> chaque tour rend <b>6 ✦ (PA)</b> et <b>4 👣 (PM)</b>. Les sorts coûtent des PA, les déplacements des PM. Quitter le contact d'un ennemi coûte <b>+1 PM (tacle)</b>.</p>
+      <p>🎯 Touchez un ennemi pour voir ses PV et sa distance. Choisissez un sort (cases <b>vertes</b> = alliés, <b>rouges</b> = dégâts), puis la cible.</p>
+      <p>💫 Les coups <b>critiques</b> (×1,5), les <b>esquives</b> et les <b>résistances</b> pimentent les dégâts. Les nombres <b>jaunes</b> sont critiques, <b>gris</b> = esquivé.</p>
+      <p>🎒 Le butin (or, objets, ressources) tombe dans l'inventaire. Équipez armes et bibelots : leurs bonus s'appliquent aussitôt.</p>
+      <p>📜 Suivez les quêtes : la Gardienne <b>Sélanire</b> vous attend au camp. La <b>pierre de souvenir</b> sauvegarde la partie.</p>
+    </div>
+  </div></div>
+
+  <button id="sound-btn" title="Son">🔊</button>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
